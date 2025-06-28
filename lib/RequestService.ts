@@ -20,7 +20,7 @@ interface IRequestServiceOptions {
   requestsPerInterval: number;
 }
 
-interface HTTPResponse<T> extends Response {
+export interface HTTPResponse<T> extends Response {
   parsedBody?: T;
 }
 

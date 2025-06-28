@@ -16,4 +16,3 @@
  */
 
 export * from "./lib/Client.ts";
-export type * from "./types/types.d.ts";

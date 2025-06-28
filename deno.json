@@ -1,6 +1,7 @@
 {
   "name": "@murphyslaw/frontier-world-api-client",
-  "version": "0.0.3",
+  "version": "0.0.4",
+  "license": "MIT",
   "exports": "./mod.ts",
   "tasks": {
     "dev": "deno run --watch mod.ts",
@@ -19,7 +20,6 @@
       "scripts/",
       "tests/",
       "deno.lock",
-      "LICENSE",
       "README.md"
     ]
   }
