@@ -1,0 +1,20 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@std/async@^1.0.13": "1.0.13"
+  },
+  "jsr": {
+    "@std/async@1.0.13": {
+      "integrity": "1d76ca5d324aef249908f7f7fe0d39aaf53198e5420604a59ab5c035adc97c96"
+    }
+  },
+  "remote": {
+    "https://deno.land/x/delay@v0.2.0/mod.ts": "5ae83b4c1d128ec2246edd11f12df76ce184a755ff9bf48e0940346fb310571d",
+    "https://deno.land/x/delay@v0.2.0/src/delay.ts": "6434eeb9baf3034143832be5dcfe54e4d78bafbcca58c69bb6c9f2b983b0f497"
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@std/async@^1.0.13"
+    ]
+  }
+}
