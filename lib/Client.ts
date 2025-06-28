@@ -1,14 +1,25 @@
-import type { Config, Health, Type } from "../types/types.d.ts";
+import type { Config, Health, IClient, Type } from "../types/types.d.ts";
 import type { components } from "../types/world-api.schema.d.ts";
 import { type IRequestService, RequestService } from "./RequestService.ts";
 
 type PaginatedResponse = components["schemas"]["v2.paginatedResponse"];
 type HealthResponse = components["schemas"]["routes.heatlhy"];
 
-export class Client {
+/**
+ * A class to represent an EVE:Frontier World API client.
+ */
+export class Client implements IClient {
+  /** Service to issue http requests. */
   #requestService: IRequestService;
+
+  /** Base URL endpoint of the EVE:Frontier World API. */
   #baseUrl: string;
 
+  /**
+   * Create a EVE:Frontier World API client.
+   *
+   * @param config client configuration options
+   */
   constructor(config: Config) {
     if (!config.baseUrl) throw new Error("baseUrl configuration required");
 
@@ -16,6 +27,11 @@ export class Client {
     this.#baseUrl = config.baseUrl;
   }
 
+  /**
+   * Tells you if the World API is ok.
+   *
+   * @returns True, when the World API is healthy, false otherwise.
+   */
   public async health(): Promise<Health> {
     try {
       const response = await this.#get<HealthResponse>("health");
@@ -27,6 +43,11 @@ export class Client {
     }
   }
 
+  /**
+   * Get all the game types.
+   *
+   * @returns List of all game types.
+   */
   public async types(): Promise<Type[]> {
     try {
       return await this.#paginated<Type>("v2/types");

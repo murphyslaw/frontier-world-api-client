@@ -1,10 +1,19 @@
 /**
  * A module providing a client to consume the EVE:Frontier World API.
+ *
+ * @example
+ * ```ts
+ * import { Client } from "@murphyslaw/frontier-world-api-client";
+ *
+ * const client = new Client({
+ *   baseUrl: "https://blockchain-gateway-stillness.live.tech.evefrontier.com",
+ * });
+ *
+ * const health: boolean = await client.health();
+ * ```
+ *
  * @module
  */
 
-// Export client
-export { Client } from "./lib/Client.ts";
-
-// Export types
-export type { Config, Health, Type } from "./types/types.d.ts";
+export * from "./lib/Client.ts";
+export type * from "./types/types.d.ts";
