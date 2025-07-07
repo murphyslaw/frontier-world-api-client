@@ -6,7 +6,7 @@
  * import { Client } from "@murphyslaw/frontier-world-api-client";
  *
  * const client = new Client({
- *   baseUrl: "https://blockchain-gateway-stillness.live.tech.evefrontier.com",
+ *   base: "https://blockchain-gateway-stillness.live.tech.evefrontier.com",
  * });
  *
  * const health: boolean = await client.health();

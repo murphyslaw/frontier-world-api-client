@@ -1,7 +1,7 @@
-import { Client, type Config } from "../lib/Client.ts";
+import { Client, type ClientConfig } from "../lib/Client.ts";
 
-const config: Config = {
-  baseUrl: "https://blockchain-gateway-stillness.live.tech.evefrontier.com",
+const config: ClientConfig = {
+  base: "https://blockchain-gateway-stillness.live.tech.evefrontier.com",
 };
 const client: Client = new Client(config);
 

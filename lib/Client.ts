@@ -1,14 +1,42 @@
-import type { components } from "../types/world-api.schema.d.ts";
+import type { ERC2771, Format, Pod } from "../types/types.d.ts";
+import { type AbiConfig, AbiConfigAction } from "./AbiConfigAction.ts";
+import { type Config, ConfigAction } from "./ConfigAction.ts";
+import { type Fuels, FuelsAction } from "./FuelsAction.ts";
+import { HealthAction } from "./HealthAction.ts";
+import { type Jump, JumpAction } from "./JumpAction.ts";
+import { type Jumps, JumpsAction } from "./JumpsAction.ts";
+import { type Killmail, KillmailAction } from "./KillmailAction.ts";
+import { type Killmails, KillmailsAction } from "./KillmailsAction.ts";
+import { MetaTransactionAction } from "./MetaTransactionAction.ts";
+import { type IRequestService, RequestService } from "./RequestService.ts";
+import { type Scan, ScanAction } from "./ScanAction.ts";
+import { type Scans, ScansAction } from "./ScansAction.ts";
 import {
-  type HTTPResponse,
-  type IRequestService,
-  RequestService,
-} from "./RequestService.ts";
+  type SmartAssemblies,
+  SmartAssembliesAction,
+} from "./SmartAssembliesAction.ts";
+import {
+  type SmartAssembly,
+  SmartAssemblyAction,
+} from "./SmartAssemblyAction.ts";
+import {
+  type SmartCharacter,
+  SmartCharacterAction,
+} from "./SmartCharacterAction.ts";
+import {
+  type SmartCharacters,
+  SmartCharactersAction,
+} from "./SmartCharactersAction.ts";
+import { type SolarSystem, SolarSystemAction } from "./SolarSystemAction.ts";
+import { type SolarSystems, SolarSystemsAction } from "./SolarSystemsAction.ts";
+import { type Type, TypeAction } from "./TypeAction.ts";
+import { type Types, TypesAction } from "./TypesAction.ts";
+import { VerifyAction } from "./VerifyAction.ts";
 
 /** The configuration bag to pass to the {@link IClient} constructor. */
-export type Config = {
+export type ClientConfig = {
   /** Base URL endpoint of the EVE:Frontier World API. */
-  baseUrl: string;
+  base: string;
 };
 
 /**
@@ -18,21 +46,17 @@ export class Client {
   /** Service to issue http requests. */
   #requestService: IRequestService;
 
-  /** Base URL endpoint of the EVE:Frontier World API. */
-  #baseUrl: string;
-
   /**
    * Create a EVE:Frontier World API client.
    *
    * @param config client configuration options
    */
-  constructor(config: Config) {
-    if (!config.baseUrl) {
-      throw new Error("config parameter with `baseUrl` required");
+  constructor(config: ClientConfig) {
+    if (!config.base) {
+      throw new Error("config parameter with `base` required");
     }
 
-    this.#requestService = new RequestService();
-    this.#baseUrl = config.baseUrl;
+    this.#requestService = new RequestService(config.base);
   }
 
   /**
@@ -40,20 +64,10 @@ export class Client {
    *
    * @returns ABI with some config.
    */
-  public async ABIConfig(): Promise<components["schemas"]["routes.ABIConfig"]> {
-    try {
-      const response = await this.#get<
-        components["schemas"]["routes.ABIConfig"]
-      >("abis/config");
+  public ABIConfig(): Promise<AbiConfig> {
+    const action = new AbiConfigAction(this.#requestService);
 
-      if (!response.parsedBody) {
-        throw new Error("response without parsed body");
-      }
-
-      return response.parsedBody;
-    } catch (error) {
-      throw new Error("could not fetch ABI config", { cause: error });
-    }
+    return action.execute();
   }
 
   /**
@@ -61,24 +75,12 @@ export class Client {
    *
    * @returns World API config.
    */
-  public async config(): Promise<components["schemas"]["models.ChainConfig"]> {
-    try {
-      const response = await this.#get<
-        components["schemas"]["models.ChainConfig"][]
-      >("config");
+  public async config(): Promise<Config> {
+    const action = new ConfigAction(this.#requestService);
 
-      if (!response.parsedBody) {
-        throw new Error("response without parsed body");
-      }
+    const result = await action.execute();
 
-      if (!response.parsedBody[0]) {
-        throw new Error("response without config entry");
-      }
-
-      return response.parsedBody[0];
-    } catch (error) {
-      throw new Error("could not fetch config", { cause: error });
-    }
+    return result[0];
   }
 
   /**
@@ -87,15 +89,11 @@ export class Client {
    * @returns True, when the World API is healthy, false otherwise.
    */
   public async health(): Promise<boolean> {
-    try {
-      const response = await this.#get<components["schemas"]["routes.heatlhy"]>(
-        "health",
-      );
+    const action = new HealthAction(this.#requestService);
 
-      return response.status === 200 && Boolean(response.parsedBody?.ok);
-    } catch (error) {
-      throw new Error("could not fetch health", { cause: error });
-    }
+    const result = await action.execute();
+
+    return result.ok ?? false;
   }
 
   /**
@@ -104,20 +102,10 @@ export class Client {
    *
    * @param erc2771 ERC2771 Meta TX object
    */
-  public async metatransaction(
-    erc2771: components["schemas"]["v1.ERC2771"],
-  ): Promise<void> {
-    if (!erc2771) {
-      throw new Error("erc2771 parameter required");
-    }
+  public metatransaction(erc2771: ERC2771): Promise<void> {
+    const action = new MetaTransactionAction(this.#requestService);
 
-    try {
-      await this.#post<void>("metatransaction", erc2771);
-
-      return;
-    } catch (error) {
-      throw new Error("could not submit metatransaction", { cause: error });
-    }
+    return action.execute(erc2771);
   }
 
   /**
@@ -125,96 +113,44 @@ export class Client {
    *
    * @returns List of all fuels with some metadata.
    */
-  public async fuels(): Promise<components["schemas"]["v2.fuelResponse"][]> {
-    try {
-      const response = await this.#get<
-        components["schemas"]["v2.fuelResponse"][]
-      >("v2/fuels");
+  public fuels(): Promise<Fuels> {
+    const action = new FuelsAction(this.#requestService);
 
-      if (!response.parsedBody) {
-        throw new Error("response without parsed body");
-      }
-
-      return response.parsedBody;
-    } catch (error) {
-      throw new Error("could not fetch fuels", { cause: error });
-    }
+    return action.execute();
   }
 
   /**
    * Retrieve all killmails that have been saved to the chain.
    *
+   * @param limit Maximum number of results.
+   * @param offset Starting index for paginated results.
    * @returns List of all reported killmails.
    */
-  public async killmails(): Promise<
-    components["schemas"]["v2.killMailResponse"][]
-  > {
-    try {
-      const response = await this.#paginated<
-        components["schemas"]["v2.killMailResponse"]
-      >("v2/killmails");
+  public killmails(
+    limit: number = 100,
+    offset: number = 0,
+  ): Promise<Killmails> {
+    const action = new KillmailsAction(this.#requestService, limit, offset);
 
-      return response;
-    } catch (error) {
-      throw new Error("could not fetch killmails", { cause: error });
-    }
+    return action.execute();
   }
 
   /**
    * Retrieve a single killmail by the given id.
    *
-   * @param id ID of the requested killmail.
-   * @param format Alternative "pod" format.
+   * @param id Killmail ID.
+   * @param format JSON or POD format.
    * @returns A single killmail.
    */
-  public async killmail(
+  public killmail(id: number, format?: "json"): Promise<Killmail<"json">>;
+  public killmail(id: number, format: "pod"): Promise<Killmail<"pod">>;
+  public killmail(
     id: number,
-  ): Promise<components["schemas"]["v2.killMailResponse"]>;
-  public async killmail(
-    id: number,
-    format: "pod",
-  ): Promise<components["schemas"]["pod.Pod"]>;
-  public async killmail(
-    id: number,
-    format?: "pod",
-  ): Promise<
-    | components["schemas"]["v2.killMailResponse"]
-    | components["schemas"]["pod.Pod"]
-  > {
-    if (!id) {
-      throw new Error("id parameter required");
-    }
+    format: Format = "json",
+  ): Promise<Killmail<Format>> {
+    const action = new KillmailAction(this.#requestService, id, format);
 
-    if (format && format !== "pod") {
-      throw new Error("format parameter must be 'pod'");
-    }
-
-    try {
-      let response: HTTPResponse<
-        | components["schemas"]["v2.killMailResponse"]
-        | components["schemas"]["pod.Pod"]
-      >;
-
-      if (format === "pod") {
-        response = await this.#get<
-          components["schemas"]["pod.Pod"]
-        >(`v2/killmails/${id}?format=pod`);
-      } else {
-        response = await this.#get<
-          components["schemas"]["v2.killMailResponse"]
-        >(`v2/killmails/${id}?format=json`);
-      }
-
-      if (!response.parsedBody) {
-        throw new Error("response without parsed body");
-      }
-
-      return response.parsedBody;
-    } catch (error) {
-      throw new Error(`could not fetch killmail with id "${id}"`, {
-        cause: error,
-      });
-    }
+    return action.execute();
   }
 
   /**
@@ -223,570 +159,282 @@ export class Client {
    * @param pod A Provable Object Datatype object.
    * @return True, if pod is valid, false otherwise.
    */
-  public async verify(pod: components["schemas"]["pod.Pod"]): Promise<boolean> {
-    if (!pod) {
-      throw new Error("pod parameter required");
-    }
+  public async verify(pod: Pod): Promise<boolean> {
+    const action = new VerifyAction(this.#requestService);
 
-    try {
-      const response = await this.#post<
-        components["schemas"]["v2.verifyResponse"]
-      >("v2/pod/verify", pod);
+    const result = await action.execute(pod);
 
-      if (!response.parsedBody) {
-        throw new Error("response without parsed body");
-      }
-
-      if (response.parsedBody.isValid === undefined) {
-        throw new Error("response without isValid entry");
-      }
-
-      return response.parsedBody.isValid;
-    } catch (error) {
-      throw new Error("could not verify pod", { cause: error });
-    }
+    return result.isValid ?? false;
   }
 
   /**
    * Get all the smart assemblies currently in the World.
    *
+   * @param limit Maximum number of results.
+   * @param offset Starting index for paginated results.
    * @returns List of all smart assemblies currently in the world.
    */
-  public async smartassemblies(): Promise<
-    components["schemas"]["v2.smartAssemblyResponse"][]
-  > {
-    try {
-      const response = await this.#paginated<
-        components["schemas"]["v2.smartAssemblyResponse"]
-      >("v2/smartassemblies");
+  public smartassemblies(
+    limit: number = 100,
+    offset: number = 0,
+  ): Promise<SmartAssemblies> {
+    const action = new SmartAssembliesAction(
+      this.#requestService,
+      limit,
+      offset,
+    );
 
-      return response;
-    } catch (error) {
-      throw new Error("could not fetch types", { cause: error });
-    }
+    return action.execute();
   }
 
   /**
-   * Retrieve a single killmail by the given id.
+   * Retrieve a single smart assembly by the given id.
    *
-   * @param id ID of the requested killmail.
-   * @param format Alternative "pod" format.
-   * @returns A single killmail.
+   * @param id Smart assembly ID.
+   * @param format JSON or POD format.
+   * @returns A single smart assembly.
    */
-  public async smartassembly(
-    id: number,
-  ): Promise<components["schemas"]["v2.detailedSmartAssemblyResponse"]>;
-  public async smartassembly(
-    id: number,
+  public smartassembly(
+    id: string,
+    format?: "json",
+  ): Promise<SmartAssembly<"json">>;
+  public smartassembly(
+    id: string,
     format: "pod",
-  ): Promise<components["schemas"]["pod.Pod"]>;
-  public async smartassembly(
-    id: number,
-    format?: "pod",
-  ): Promise<
-    | components["schemas"]["v2.detailedSmartAssemblyResponse"]
-    | components["schemas"]["pod.Pod"]
-  > {
-    if (!id) {
-      throw new Error("id parameter required");
-    }
+  ): Promise<SmartAssembly<"pod">>;
+  public smartassembly(
+    id: string,
+    format: Format = "json",
+  ): Promise<SmartAssembly<Format>> {
+    const action = new SmartAssemblyAction(this.#requestService, id, format);
 
-    if (format && format !== "pod") {
-      throw new Error("format parameter must be 'pod'");
-    }
-
-    try {
-      let response: HTTPResponse<
-        | components["schemas"]["v2.detailedSmartAssemblyResponse"]
-        | components["schemas"]["pod.Pod"]
-      >;
-
-      if (format === "pod") {
-        response = await this.#get<
-          components["schemas"]["pod.Pod"]
-        >(`v2/smartassemblies/${id}?format=pod`);
-      } else {
-        response = await this.#get<
-          components["schemas"]["v2.detailedSmartAssemblyResponse"]
-        >(`v2/smartassemblies/${id}?format=json`);
-      }
-
-      if (!response.parsedBody) {
-        throw new Error("response without parsed body");
-      }
-
-      return response.parsedBody;
-    } catch (error) {
-      throw new Error(`could not fetch smartassembly with id "${id}"`, {
-        cause: error,
-      });
-    }
+    return action.execute();
   }
 
   /**
    * Get all the smart characters currently in the world.
    *
+   * @param limit Maximum number of results.
+   * @param offset Starting index for paginated results.
    * @returns List of all smart characters currently in the world.
    */
-  public async smartcharacters(): Promise<
-    components["schemas"]["v2.smartCharacterResponse"][]
-  > {
-    try {
-      const response = await this.#paginated<
-        components["schemas"]["v2.smartCharacterResponse"]
-      >("v2/smartcharacters");
+  public smartcharacters(
+    limit: number = 100,
+    offset: number = 0,
+  ): Promise<SmartCharacters> {
+    const action = new SmartCharactersAction(
+      this.#requestService,
+      limit,
+      offset,
+    );
 
-      return response;
-    } catch (error) {
-      throw new Error("could not fetch smart characters", { cause: error });
-    }
+    return action.execute();
   }
 
   /**
    * Retrieve a single smartcharacter by the given address.
    *
-   * @param address Address of the requested smartcharacter.
-   * @param format Alternative "pod" format.
+   * @param address Smart character address.
    * @returns A single smartcharacter.
    */
-  public async smartcharacter(
-    address: number,
-  ): Promise<components["schemas"]["v2.detailedSmartCharacterResponse"]>;
-  public async smartcharacter(
-    address: number,
-    format: "pod",
-  ): Promise<components["schemas"]["pod.Pod"]>;
-  public async smartcharacter(
-    address: number,
-    format?: "pod",
-  ): Promise<
-    | components["schemas"]["v2.detailedSmartCharacterResponse"]
-    | components["schemas"]["pod.Pod"]
-  > {
-    if (!address) {
-      throw new Error("id parameter required");
-    }
+  public smartcharacter(address: string): Promise<SmartCharacter> {
+    const action = new SmartCharacterAction(this.#requestService, address);
 
-    if (format && format !== "pod") {
-      throw new Error("format parameter must be 'pod'");
-    }
-
-    try {
-      let response: HTTPResponse<
-        | components["schemas"]["v2.detailedSmartCharacterResponse"]
-        | components["schemas"]["pod.Pod"]
-      >;
-
-      if (format === "pod") {
-        response = await this.#get<
-          components["schemas"]["pod.Pod"]
-        >(`v2/smartcharacters/${address}?format=pod`);
-      } else {
-        response = await this.#get<
-          components["schemas"]["v2.detailedSmartCharacterResponse"]
-        >(`v2/smartcharacters/${address}?format=json`);
-      }
-
-      if (!response.parsedBody) {
-        throw new Error("response without parsed body");
-      }
-
-      return response.parsedBody;
-    } catch (error) {
-      throw new Error(
-        `could not fetch smartcharacter with address "${address}"`,
-        {
-          cause: error,
-        },
-      );
-    }
+    return action.execute();
   }
 
   /**
    * Get all the gate jumps that the current authenticated user made.
    *
    * @param bearer Access token to authenticate a user.
+   * @param limit Maximum number of results.
+   * @param offset Starting index for paginated results.
    * @returns List of all the gate jumps that the current authenticated user made.
    */
-  public async jumps(
+  public jumps(
     bearer: string,
-  ): Promise<components["schemas"]["v2.jumpResponse"][]> {
-    if (!bearer) {
-      throw new Error("bearer parameter required");
-    }
+    limit: number = 100000,
+    offset: number = 0,
+  ): Promise<Jumps> {
+    const action = new JumpsAction(this.#requestService, bearer, limit, offset);
 
-    try {
-      const response = await this.#paginated<
-        components["schemas"]["v2.jumpResponse"]
-      >("v2/smartcharacters/me/jumps", bearer);
-
-      return response;
-    } catch (error) {
-      throw new Error("could not fetch jumps", { cause: error });
-    }
+    return action.execute();
   }
 
   /**
    * Retrieve a single jump.
    *
-   * @param id ID of the requested jump.
+   * @param id Jump ID.
    * @param bearer Access token to authenticate a user.
-   * @param format Alternative "pod" format.
+   * @param format JSON or POD format.
    * @returns A single jump.
    */
-  public async jump(
+  public jump(
     id: number,
     bearer: string,
-  ): Promise<components["schemas"]["v2.jumpResponse"]>;
-  public async jump(
+    format?: "json",
+  ): Promise<Jump<"json">>;
+  public jump(id: number, bearer: string, format: "pod"): Promise<Jump<"pod">>;
+  public jump(
     id: number,
     bearer: string,
-    format: "pod",
-  ): Promise<components["schemas"]["pod.Pod"]>;
-  public async jump(
-    id: number,
-    bearer: string,
-    format?: "pod",
-  ): Promise<
-    components["schemas"]["v2.jumpResponse"] | components["schemas"]["pod.Pod"]
-  > {
-    if (!id) {
-      throw new Error("id parameter required");
-    }
+    format: Format = "json",
+  ): Promise<Jump<Format>> {
+    const action = new JumpAction(this.#requestService, bearer, id, format);
 
-    if (!bearer) {
-      throw new Error("bearer parameter required");
-    }
-
-    if (format && format !== "pod") {
-      throw new Error("format parameter must be 'pod'");
-    }
-
-    try {
-      let response: HTTPResponse<
-        | components["schemas"]["v2.jumpResponse"]
-        | components["schemas"]["pod.Pod"]
-      >;
-
-      if (format === "pod") {
-        response = await this.#get<
-          components["schemas"]["pod.Pod"]
-        >(`v2/smartcharacters/me/jumps/${id}?format=pod`, bearer);
-      } else {
-        response = await this.#get<
-          components["schemas"]["v2.jumpResponse"]
-        >(`v2/smartcharacters/me/jumps/${id}?format=json`, bearer);
-      }
-
-      if (!response.parsedBody) {
-        throw new Error("response without parsed body");
-      }
-
-      return response.parsedBody;
-    } catch (error) {
-      throw new Error(`could not fetch jump with id "${id}"`, {
-        cause: error,
-      });
-    }
+    return action.execute();
   }
 
   /**
    * Get all the scans that the current authenticated user saved.
    *
    * @param bearer Access token to authenticate a user.
+   * @param limit Maximum number of results.
+   * @param offset Starting index for paginated results.
    * @returns List of all the scans that the current authenticated user saved.
    */
-  public async scans(
+  public scans(
     bearer: string,
-  ): Promise<components["schemas"]["v2.scanResponse"][]> {
-    if (!bearer) {
-      throw new Error("bearer parameter required");
-    }
+    limit: number = 100,
+    offset: number = 0,
+  ): Promise<Scans> {
+    const action = new ScansAction(this.#requestService, bearer, limit, offset);
 
-    try {
-      const response = await this.#paginated<
-        components["schemas"]["v2.scanResponse"]
-      >("v2/smartcharacters/me/scans", bearer);
-
-      return response;
-    } catch (error) {
-      throw new Error("could not fetch scans", { cause: error });
-    }
+    return action.execute();
   }
 
   /**
    * Retrieve a single scan.
    *
-   * @param id ID of the requested scan.
+   * @param id Scan ID.
    * @param bearer Access token to authenticate a user.
-   * @param format Alternative "pod" format.
+   * @param format JSON or POD format.
    * @returns A single scan.
    */
-  public async scan(
+  public scan(
     id: number,
     bearer: string,
-  ): Promise<components["schemas"]["v2.scanResponse"]>;
-  public async scan(
+    format?: "json",
+  ): Promise<Scan<"json">>;
+  public scan(id: number, bearer: string, format: "pod"): Promise<Scan<"pod">>;
+  public scan(
     id: number,
     bearer: string,
-    format: "pod",
-  ): Promise<components["schemas"]["pod.Pod"]>;
-  public async scan(
-    id: number,
-    bearer: string,
-    format?: "pod",
-  ): Promise<
-    components["schemas"]["v2.scanResponse"] | components["schemas"]["pod.Pod"]
-  > {
-    if (!id) {
-      throw new Error("id parameter required");
-    }
+    format: Format = "json",
+  ): Promise<Scan<Format>> {
+    const action = new ScanAction(this.#requestService, bearer, id, format);
 
-    if (!bearer) {
-      throw new Error("bearer parameter required");
-    }
-
-    if (format && format !== "pod") {
-      throw new Error("format parameter must be 'pod'");
-    }
-
-    try {
-      let response: HTTPResponse<
-        | components["schemas"]["v2.scanResponse"]
-        | components["schemas"]["pod.Pod"]
-      >;
-
-      if (format === "pod") {
-        response = await this.#get<
-          components["schemas"]["pod.Pod"]
-        >(`v2/smartcharacters/me/scans/${id}?format=pod`, bearer);
-      } else {
-        response = await this.#get<
-          components["schemas"]["v2.scanResponse"]
-        >(`v2/smartcharacters/me/scans/${id}?format=json`, bearer);
-      }
-
-      if (!response.parsedBody) {
-        throw new Error("response without parsed body");
-      }
-
-      return response.parsedBody;
-    } catch (error) {
-      throw new Error(`could not fetch jump with id "${id}"`, {
-        cause: error,
-      });
-    }
+    return action.execute();
   }
 
   /**
    * Get all the solar systems currently in the world.
    *
+   * @param limit Maximum number of results.
+   * @param offset Starting index for paginated results.
    * @returns List of all solar systems currently in the world.
    */
-  public async solarsystems(): Promise<
-    components["schemas"]["v2.solarSystemResponse"][]
-  > {
-    try {
-      const response = await this.#paginated<
-        components["schemas"]["v2.solarSystemResponse"]
-      >("v2/solarsystems");
+  public solarsystems(
+    limit: number = 1000,
+    offset: number = 0,
+  ): Promise<SolarSystems> {
+    const action = new SolarSystemsAction(this.#requestService, limit, offset);
 
-      return response;
-    } catch (error) {
-      throw new Error("could not fetch solar systems", { cause: error });
-    }
+    return action.execute();
   }
 
   /**
    * Retrieve a single solar system by the given id.
    *
-   * @param id ID of the requested solar system.
-   * @param format Alternative "pod" format.
+   * @param id Solar system ID.
+   * @param format JSON or POD format.
    * @returns A single solar system.
    */
-  public async solarsystem(
+  public solarsystem(id: number, format?: "json"): Promise<SolarSystem<"json">>;
+  public solarsystem(id: number, format: "pod"): Promise<SolarSystem<"pod">>;
+  public solarsystem(
     id: number,
-  ): Promise<components["schemas"]["v2.detailedSolarSystemResponse"]>;
-  public async solarsystem(
-    id: number,
-    format: "pod",
-  ): Promise<components["schemas"]["pod.Pod"]>;
-  public async solarsystem(
-    id: number,
-    format?: "pod",
-  ): Promise<
-    | components["schemas"]["v2.solarSystemResponse"]
-    | components["schemas"]["pod.Pod"]
-  > {
-    if (!id) {
-      throw new Error("id parameter required");
-    }
+    format: Format = "json",
+  ): Promise<SolarSystem<Format>> {
+    const action = new SolarSystemAction(this.#requestService, id, format);
 
-    if (format && format !== "pod") {
-      throw new Error("format parameter must be 'pod'");
-    }
-
-    try {
-      let response: HTTPResponse<
-        | components["schemas"]["v2.detailedSolarSystemResponse"]
-        | components["schemas"]["pod.Pod"]
-      >;
-
-      if (format === "pod") {
-        response = await this.#get<
-          components["schemas"]["pod.Pod"]
-        >(`v2/solarsystems/${id}?format=pod`);
-      } else {
-        response = await this.#get<
-          components["schemas"]["v2.detailedSolarSystemResponse"]
-        >(`v2/solarsystems/${id}?format=json`);
-      }
-
-      if (!response.parsedBody) {
-        throw new Error("response without parsed body");
-      }
-
-      return response.parsedBody;
-    } catch (error) {
-      throw new Error(`could not fetch solar system with id "${id}"`, {
-        cause: error,
-      });
-    }
+    return action.execute();
   }
 
   /**
    * Get all the game types.
    *
+   * @param limit Maximum number of results.
+   * @param offset Starting index for paginated results.
    * @returns List of all game types.
    */
-  public async types(): Promise<components["schemas"]["v2.typeResponse"][]> {
-    try {
-      const response = await this.#paginated<
-        components["schemas"]["v2.typeResponse"]
-      >("v2/types");
+  public types(limit: number = 100, offset: number = 0): Promise<Types> {
+    const action = new TypesAction(this.#requestService, limit, offset);
 
-      return response;
-    } catch (error) {
-      throw new Error("could not fetch types", { cause: error });
-    }
+    return action.execute();
   }
 
   /**
    * Retrieve a single game type by the given id.
    *
-   * @param id ID of the requested game type.
-   * @param format Alternative "pod" format.
+   * @param id Game type ID.
+   * @param format JSON or POD format.
    * @returns A single game type.
    */
-  public async type(
+  public type(id: number, format?: "json"): Promise<Type<"json">>;
+  public type(id: number, format: "pod"): Promise<Type<"pod">>;
+  public type(
     id: number,
-  ): Promise<components["schemas"]["v2.typeResponse"]>;
-  public async type(
-    id: number,
-    format: "pod",
-  ): Promise<components["schemas"]["pod.Pod"]>;
-  public async type(
-    id: number,
-    format?: "pod",
-  ): Promise<
-    components["schemas"]["v2.typeResponse"] | components["schemas"]["pod.Pod"]
-  > {
-    if (!id) {
-      throw new Error("id parameter required");
-    }
+    format: Format = "json",
+  ): Promise<Type<Format>> {
+    const action = new TypeAction(this.#requestService, id, format);
 
-    if (format && format !== "pod") {
-      throw new Error("format parameter must be 'pod'");
-    }
-
-    try {
-      let response: HTTPResponse<
-        | components["schemas"]["v2.typeResponse"]
-        | components["schemas"]["pod.Pod"]
-      >;
-
-      if (format === "pod") {
-        response = await this.#get<
-          components["schemas"]["pod.Pod"]
-        >(`v2/types/${id}?format=pod`);
-      } else {
-        response = await this.#get<
-          components["schemas"]["v2.typeResponse"]
-        >(`v2/types/${id}?format=json`);
-      }
-
-      if (!response.parsedBody) {
-        throw new Error("response without parsed body");
-      }
-
-      return response.parsedBody;
-    } catch (error) {
-      throw new Error(`could not fetch game type with id "${id}"`, {
-        cause: error,
-      });
-    }
+    return action.execute();
   }
 
-  async #paginated<T>(
-    path: string,
-    bearer: string = "",
-    limit: number = 100,
-    offset: number = 0,
-  ): Promise<T[]> {
-    const results: T[] = [];
+  // async #paginated<T>(
+  //   path: string,
+  //   bearer: string = "",
+  //   limit: number = 100,
+  //   offset: number = 0,
+  // ): Promise<T[]> {
+  //   const results: T[] = [];
 
-    try {
-      const searchParams = new URLSearchParams();
-      searchParams.append("limit", String(limit));
-      searchParams.append("offset", String(offset));
+  //   try {
+  //     const searchParams = new URLSearchParams();
+  //     searchParams.set("limit", String(limit));
+  //     searchParams.set("offset", String(offset));
 
-      const response = await this.#get<
-        components["schemas"]["v2.paginatedResponse"] & { data?: T[] }
-      >(
-        `${path}?${searchParams}`,
-        bearer,
-      );
+  //     const response = await this.#get<
+  //       components["schemas"]["v2.paginatedResponse"] & { data?: T[] }
+  //     >(
+  //       `${path}?${searchParams}`,
+  //       bearer,
+  //     );
 
-      if (!response.parsedBody) {
-        throw new Error("paginated response without parsed body");
-      }
+  //     if (!response.parsedBody) {
+  //       throw new Error("paginated response without parsed body");
+  //     }
 
-      const { data, metadata } = response.parsedBody;
+  //     const { data, metadata } = response.parsedBody;
 
-      if (!data) throw new Error("paginated response without data");
-      results.push(...data);
+  //     if (!data) throw new Error("paginated response without data");
+  //     results.push(...data);
 
-      if (!metadata) throw new Error("paginated response without metadata");
-      if (!metadata.total) throw new Error("paginated response without total");
+  //     if (!metadata) throw new Error("paginated response without metadata");
+  //     if (!metadata.total) throw new Error("paginated response without total");
 
-      const total = metadata.total;
+  //     const total = metadata.total;
 
-      if (offset + limit < total) {
-        results.push(
-          ...await this.#paginated<T>(path, bearer, limit, offset + limit),
-        );
-      }
+  //     if (offset + limit < total) {
+  //       results.push(
+  //         ...await this.#paginated<T>(path, bearer, limit, offset + limit),
+  //       );
+  //     }
 
-      return results;
-    } catch (error) {
-      throw new Error("could not fetch paginated results", { cause: error });
-    }
-  }
-
-  #get<T>(path: string, bearer?: string): Promise<HTTPResponse<T>> {
-    const headers: HeadersInit = {};
-
-    if (bearer) {
-      headers["Authorization"] = `Bearer ${bearer}`;
-    }
-
-    return this.#requestService.get<T>(`${this.#baseUrl}/${path}`, {
-      method: "GET",
-      headers,
-    });
-  }
-
-  #post<T>(path: string, body: unknown) {
-    return this.#requestService.post<T>(`${this.#baseUrl}/${path}`, body);
-  }
+  //     return results;
+  //   } catch (error) {
+  //     throw new Error("could not fetch paginated results", { cause: error });
+  //   }
+  // }
 }

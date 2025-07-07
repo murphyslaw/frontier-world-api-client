@@ -1,10 +1,23 @@
 import { delay } from "@std/async";
 
 export interface IRequestService {
-  get<T>(path: string, args?: RequestInit): Promise<HTTPResponse<T>>;
+  base: string;
+  get<T>(
+    path: string,
+    args?: RequestInit,
+  ): Promise<HTTPResponse<T>>;
   post<T>(
     path: string,
     body: unknown,
+    args?: RequestInit,
+  ): Promise<HTTPResponse<T>>;
+  put<T>(
+    path: string,
+    body: unknown,
+    args?: RequestInit,
+  ): Promise<HTTPResponse<T>>;
+  delete<T>(
+    path: string,
     args?: RequestInit,
   ): Promise<HTTPResponse<T>>;
 }
@@ -24,7 +37,10 @@ export interface HTTPResponse<T> extends Response {
   parsedBody?: T;
 }
 
-export class RequestService {
+export class RequestService implements IRequestService {
+  /** Base URL endpoint of the EVE:Frontier World API. */
+  public base: string;
+
   #options: IRequestServiceOptions = {
     intervalMilliseconds: 0,
     requestsPerInterval: Number.MAX_SAFE_INTEGER,
@@ -32,40 +48,62 @@ export class RequestService {
 
   #queue: IRequestEntity[] = [];
 
-  constructor(options?: Partial<IRequestServiceOptions>) {
-    if (!options) return;
+  constructor(base: string, options?: Partial<IRequestServiceOptions>) {
+    if (!base) {
+      throw new Error("parameter 'base' missing");
+    }
 
-    this.#options = Object.assign({}, this.#options, options);
+    this.base = base;
+
+    if (options) {
+      this.#options = Object.assign({}, this.#options, options);
+    }
   }
 
   async get<T>(
     path: string,
-    args: RequestInit = { method: "GET" },
+    args: RequestInit = {},
   ): Promise<HTTPResponse<T>> {
-    return await this.#http<T>(new Request(path, args));
+    const input: URL = new URL(path, this.base);
+    const init: RequestInit = { ...args, method: "GET" };
+    return await this.#http<T>(new Request(input, init));
   }
 
   async post<T>(
     path: string,
     body: unknown,
-    args: RequestInit = { method: "POST", body: JSON.stringify(body) },
+    args: RequestInit = {},
   ): Promise<HTTPResponse<T>> {
-    return await this.#http<T>(new Request(path, args));
+    const input: URL = new URL(path, this.base);
+    const init: RequestInit = {
+      ...args,
+      method: "POST",
+      body: JSON.stringify(body),
+    };
+    return await this.#http<T>(new Request(input, init));
   }
 
   async put<T>(
     path: string,
     body: unknown,
-    args: RequestInit = { method: "PUT", body: JSON.stringify(body) },
+    args: RequestInit = {},
   ): Promise<HTTPResponse<T>> {
-    return await this.#http<T>(new Request(path, args));
+    const input: URL = new URL(path, this.base);
+    const init: RequestInit = {
+      ...args,
+      method: "PUT",
+      body: JSON.stringify(body),
+    };
+    return await this.#http<T>(new Request(input, init));
   }
 
   async delete<T>(
     path: string,
-    args: RequestInit = { method: "DELETE" },
+    args: RequestInit = {},
   ): Promise<HTTPResponse<T>> {
-    return await this.#http<T>(new Request(path, args));
+    const input: URL = new URL(path, this.base);
+    const init: RequestInit = { ...args, method: "DELETE" };
+    return await this.#http<T>(new Request(input, init));
   }
 
   async #loop<T>(): Promise<void> {
